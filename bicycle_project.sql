@@ -1,3 +1,7 @@
+CREATE DATABASE bicycle_project;
+
+USE bicycle_project;
+
 -- Main table.
 CREATE TABLE 2022_bicycle
 (
@@ -188,6 +192,7 @@ FROM
 WHERE
   LENGTH(started_at) = 19;
 
+-- SUBSTRING is removing the quotes from the fields.
 INSERT INTO
   2022_bicycle
   (ride_id,
@@ -365,10 +370,6 @@ FROM
 
 
 
-
-
-
-
 -- Creating summary table.
 {
 
@@ -517,7 +518,6 @@ WHERE
   member_casual = 'casual';
 
 
-
 -- coalescing month information.
 {
 
@@ -568,6 +568,7 @@ CALL monthInfo('December');
 }
 
 }
+
 
 
 
