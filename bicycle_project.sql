@@ -121,38 +121,6 @@ WHERE
 }
 
 
--- Handling outliers.
-{
-
-CREATE TABLE 2022_bicycle_outliers LIKE 2022_bicycle;
-
-
-SELECT
-  COUNT(*)
-FROM
-  2022_bicycle_tmp
-WHERE -- ride duration --
-  ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8))) > '24:00:00';
-
-
-INSERT INTO
-  2022_bicycle_outliers
-SELECT 
-  *
-FROM
-  2022_bicycle_tmp
-WHERE
-  ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8))) > '24:00:00';
-
-
-DELETE FROM
-  2022_bicycle_tmp
-WHERE
-  ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8))) > '24:00:00';
-
-}
-
-
 
 
 -- Inserting the cleaned data in the 2022_bicycle table.
