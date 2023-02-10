@@ -1,3 +1,7 @@
+CREATE DATABASE bicycle_project;
+
+USE bicycle_project;
+
 -- Main table.
 CREATE TABLE 2022_bicycle
 (
@@ -101,6 +105,7 @@ GROUP BY ride_id
 HAVING COUNT(ride_id) > 1
 LIMIT 100;
 
+
 SELECT
   started_at, ended_at
 FROM
@@ -113,38 +118,6 @@ DELETE FROM
   2022_bicycle_tmp
 WHERE
   ended_at < started_at;
-
-}
-
-
--- Handling outliers.
-{
-
-CREATE TABLE 2022_bicycle_outliers LIKE 2022_bicycle;
-
-
-SELECT
-  COUNT(*)
-FROM
-  2022_bicycle_tmp
-WHERE -- ride duration --
-  ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8))) > '24:00:00';
-
-
-INSERT INTO
-  2022_bicycle_outliers
-SELECT 
-  *
-FROM
-  2022_bicycle_tmp
-WHERE
-  ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8))) > '24:00:00';
-
-
-DELETE FROM
-  2022_bicycle_tmp
-WHERE
-  ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8))) > '24:00:00';
 
 }
 
@@ -218,153 +191,11 @@ SELECT
   end_lgn,
   SUBSTRING(member_casual, 2, LENGTH(member_casual) - 2)
 FROM
-  2022_12
+  2022_bicycle_tmp
 WHERE
   LENGTH(started_at) = 21;
 
 }
-
-
-
-
--- Creating tables to split the data based on ride_id.
-{
-
-CREATE TABLE bicycle_rideable_type
-(
-`ride_id` VARCHAR(255),
-`rideable_type` VARCHAR(255),
-/*
-CONSTRAINT fk_ride_id_rideable_type FOREIGN KEY (ride_id) REFERENCES 2022_bicycle(ride_id)
-ON DELETE CASCADE
-ON UPDATE CASCADE;
-*/
-);
-
-CREATE TABLE bicycle_started_ended
-(
-`ride_id` VARCHAR(255),
-`started_at` VARCHAR(255),
-`ended_at` VARCHAR(255),
-
-/*
-CONSTRAINT fk_ride_id_started_ended FOREIGN KEY (ride_id) REFERENCES 2022_bicycle(ride_id)
-ON DELETE CASCADE
-ON UPDATE CASCADE;
-*/
-);
-
-CREATE TABLE bicycle_station_name_id
-(
-`ride_id` VARCHAR(255),
-`start_station_name` VARCHAR(255),
-`start_station_id` VARCHAR(255),
-`end_station_name` VARCHAR(255),
-`end_station_id` VARCHAR(255),
-
-/*
-CONSTRAINT fk_ride_id_station_name FOREIGN KEY (ride_id) REFERENCES 2022_bicycle(ride_id)
-ON DELETE CASCADE
-ON UPDATE CASCADE;
-*/
-);
-
-CREATE TABLE bicycle_latitude_longitude
-(
-`ride_id` VARCHAR(255),
-`start_lat` VARCHAR(255),
-`start_lgn` VARCHAR(255),
-`end_lat` VARCHAR(255),
-`end_lgn` VARCHAR(255),
-
-/*
-CONSTRAINT fk_ride_id_lat_lgn FOREIGN KEY (ride_id) REFERENCES 2022_bicycle(ride_id)
-ON DELETE CASCADE
-ON UPDATE CASCADE;
-*/
-);
-
-CREATE TABLE bicycle_member_casual
-(
-`ride_id` VARCHAR(255),
-`member_casual` VARCHAR(255),
-
-/*
-CONSTRAINT fk_ride_id_member_casual FOREIGN KEY (ride_id) REFERENCES 2022_bicycle(ride_id)
-ON DELETE CASCADE
-ON UPDATE CASCADE;
-*/
-);
-
-}
-
-
-
-
--- Inserting formatted data on the created tables.
-{
-
-INSERT INTO
-  bicycle_rideable_type
-  (ride_id, rideable_type)
-SELECT
-  ride_id, 
-  rideable_type
-FROM
-  2022_bicycle;
-
-
-INSERT INTO
-  bicycle_started_ended
-  (ride_id, started_at, ended_at)
-SELECT
-  ride_id, 
-  started_at,
-  ended_at
-FROM
-  2022_bicycle;
-
-
-INSERT INTO
-  bicycle_station_name_id
-  (ride_id, start_station_name, start_station_id, end_station_name, end_station_id)
-SELECT
-  ride_id, 
-  start_station_name,
-  start_station_id,
-  end_station_name,
-  end_station_id
-FROM
-  2022_bicycle;
-
-
-INSERT INTO
-  bicycle_latitude_longitude
-  (ride_id, start_lat, start_lgn, end_lat, end_lgn)
-SELECT
-  ride_id, 
-  start_lat,
-  start_lgn,
-  end_lat,
-  end_lgn
-FROM
-  2022_bicycle;
-
-
-INSERT INTO
-  bicycle_member_casual
-  (ride_id, member_casual)
-SELECT
-  ride_id, 
-  member_casual
-FROM
-  2022_bicycle;
-
-}
-
-
-
-
 
 
 
@@ -375,7 +206,7 @@ FROM
 CREATE TABLE ride_info
 (
 ride_id VARCHAR(255),
-ride_duration DECIMAL(10, 6),
+ride_duration TIME,
 ride_started_date DATE,
 ride_week_day INT
 );
@@ -386,11 +217,11 @@ INSERT INTO
   (ride_id, ride_duration, ride_started_date, ride_week_day)
 SELECT
   ride_id,
-  TIME_TO_SEC(ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8)))) / 3600,
+  CAST(ADDTIME(SEC_TO_TIME((TO_DAYS(LEFT(ended_at, 10)) - TO_DAYS(LEFT(started_at, 10))) * 86400), SUBTIME(RIGHT(ended_at, 8), RIGHT(started_at, 8))) AS TIME),
   LEFT(started_at, 10),
   DAYOFWEEK(started_at)
 FROM
-  bicycle_started_ended;
+  2022_bicycle;
 
 }
 
@@ -431,7 +262,7 @@ BEGIN
     (day_of_week, average_ride_duration, rides_number)
   SELECT
     dayName,
-    CAST(SEC_TO_TIME(AVG(ride_duration) * 3600) AS TIME),
+    CAST(SEC_TO_TIME(AVG(TIME_TO_SEC(ride_duration))) AS TIME),
     COUNT(ride_week_day)
   FROM
     ride_info
@@ -459,7 +290,7 @@ INSERT INTO
   (info_name, info_data)
 SELECT
   'Average Ride Duration',
-  CAST(SEC_TO_TIME(AVG(ride_duration) * 3600) AS TIME)
+  CAST(SEC_TO_TIME(AVG(TIME_TO_SEC(ride_duration))) AS TIME)
 FROM
   ride_info;
 
@@ -470,7 +301,7 @@ INSERT INTO
   (info_name, info_data)
 SELECT
   'Max Ride Duration',
-  CAST(SEC_TO_TIME((MAX(CONVERT(ride_duration, DECIMAL(12, 10))) * 3600)) AS TIME)
+  CAST(SEC_TO_TIME(MAX(TIME_TO_SEC(ride_duration))) AS TIME)
 FROM
   ride_info;
 
@@ -517,7 +348,6 @@ WHERE
   member_casual = 'casual';
 
 
-
 -- coalescing month information.
 {
 
@@ -525,7 +355,7 @@ CREATE TABLE ride_info_month
 (
 month VARCHAR(255),
 rides_number INT,
-average_ride_duration DECIMAL(8,4)
+average_ride_duration TIME
 );
 
 
@@ -542,7 +372,7 @@ BEGIN
   SELECT
     monthName,
     COUNT(*),
-    AVG(ride_duration)
+    CAST(SEC_TO_TIME(AVG(TIME_TO_SEC(ride_duration))) AS TIME)
   FROM
     ride_info
   WHERE
@@ -571,6 +401,7 @@ CALL monthInfo('December');
 
 
 
+
 -- Exporting ride_info table
 {
 
@@ -585,7 +416,7 @@ SELECT
 FROM
   ride_info
 
-INTO OUTFILE '/data/data/com.termux/files/home/ride_info.csv'
+INTO OUTFILE '/data/data/com.termux/files/home/2022_bicycle_ride_info.csv'
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n';
 
@@ -628,6 +459,51 @@ FROM
   ride_info_month
 
 INTO OUTFILE '/data/data/com.termux/files/home/2022_bicycle_ride_info_month.csv'
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n';
+
+}
+
+
+-- Exporting ride_info_scalar table.
+{
+
+(
+SELECT
+  'info_name', 'info_data'
+)
+UNION
+
+SELECT
+  info_name, info_data
+FROM
+  ride_info_scalar
+
+INTO OUTFILE '/data/data/com.termux/files/home/2022_bicycle_ride_info_scalar.csv'
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n';
+
+}
+
+
+--Exporting 2022_bicycle
+{
+
+(
+SELECT
+  'ride_id', 'rideable_type', 'started_at', 'ended_at',
+  'start_station_name', 'start_station_id', 'end_station_name',
+  'end_station_id', 'start_lat', 'start_lgn', 'end_lat',
+  'end_lgn', 'member_casual'
+)
+UNION
+
+SELECT
+  *
+FROM
+  2022_bicycle
+
+INTO OUTFILE '/data/data/com.termux/files/home/2022_bicycle.csv'
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n';
 
