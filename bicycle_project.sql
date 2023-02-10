@@ -105,6 +105,7 @@ GROUP BY ride_id
 HAVING COUNT(ride_id) > 1
 LIMIT 100;
 
+
 SELECT
   started_at, ended_at
 FROM
@@ -190,7 +191,7 @@ SELECT
   end_lgn,
   SUBSTRING(member_casual, 2, LENGTH(member_casual) - 2)
 FROM
-  2022_12
+  2022_bicycle_tmp
 WHERE
   LENGTH(started_at) = 21;
 
